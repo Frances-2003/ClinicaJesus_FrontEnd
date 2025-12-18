@@ -45,22 +45,23 @@ export function Reportes() {
   // Citas por doctor
   const citasPorDoctor = useMemo(() => {
     const counts: Record<number, { nombre: string; total: number; horas: number }> = {};
-    
+
     doctores.forEach(doc => {
       counts[doc.id] = {
-        nombre: `Dr. ${doc.usuario?.nombres || ''} ${doc.usuario?.apellidos || ''}`.trim() || `Doctor ${doc.id}`,
+        nombre: `Dr. ${doc.nombres || ''} ${doc.apellidos || ''}`.trim() || `Doctor ${doc.id}`,
         total: 0,
         horas: 0,
       };
     });
 
     citas.forEach(cita => {
-      const doctorId = cita.doctor?.id || cita.horarioDisponible?.doctorId;
-      if (doctorId && counts[doctorId]) {
+      const doctorId = cita?.doctorId;
+      if (doctorId && counts[doctorId] && cita.estado === "CONFIRMADA") {
         counts[doctorId].total += 1;
         counts[doctorId].horas += 0.5; // Each slot is 30 min
       }
     });
+    console.log({ counts, doctores, citas });
 
     return Object.values(counts).filter(d => d.total > 0);
   }, [doctores, citas]);
@@ -180,11 +181,11 @@ export function Reportes() {
                     <ResponsiveContainer width="100%" height="100%">
                       <BarChart data={citasSemana}>
                         <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-                        <XAxis 
-                          dataKey="dia" 
+                        <XAxis
+                          dataKey="dia"
                           tick={{ fill: 'hsl(var(--muted-foreground))' }}
                         />
-                        <YAxis 
+                        <YAxis
                           tick={{ fill: 'hsl(var(--muted-foreground))' }}
                           allowDecimals={false}
                         />
@@ -195,9 +196,9 @@ export function Reportes() {
                             borderRadius: '8px',
                           }}
                         />
-                        <Bar 
-                          dataKey="citas" 
-                          fill="hsl(175, 60%, 40%)" 
+                        <Bar
+                          dataKey="citas"
+                          fill="hsl(175, 60%, 40%)"
                           radius={[4, 4, 0, 0]}
                         />
                       </BarChart>
@@ -251,7 +252,7 @@ export function Reportes() {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Stethoscope className="w-5 h-5 text-primary" />
-                  Citas por Doctor
+                  Citas pendientes por el Doctor
                 </CardTitle>
               </CardHeader>
               <CardContent>

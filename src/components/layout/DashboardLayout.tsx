@@ -13,6 +13,7 @@ import {
   UserCog,
   BarChart3,
   Stethoscope,
+  Clipboard,
 } from 'lucide-react';
 
 interface NavItem {
@@ -30,10 +31,13 @@ const navItemsByRole: Record<string, NavItem[]> = {
   DOCTOR: [
     { label: 'Dashboard', path: '/doctor/dashboard', icon: <Home className="w-5 h-5" /> },
     { label: 'Mis Citas', path: '/doctor/citas', icon: <Calendar className="w-5 h-5" /> },
+    { label: 'Mis Horarios', path: '/doctor/horarios', icon: <CalendarPlus className="w-5 h-5" /> },
   ],
   ADMIN: [
     { label: 'Dashboard', path: '/admin/dashboard', icon: <Home className="w-5 h-5" /> },
+    { label: 'Usuarios', path: '/admin/usuarios', icon: <UserCog className="w-5 h-5" /> },
     { label: 'Doctores', path: '/admin/doctores', icon: <Stethoscope className="w-5 h-5" /> },
+    { label: 'Especialidades', path: '/admin/especialidades', icon: <Clipboard className="w-5 h-5" /> },
     { label: 'Pacientes', path: '/admin/pacientes', icon: <Users className="w-5 h-5" /> },
     { label: 'Reportes', path: '/admin/reportes', icon: <BarChart3 className="w-5 h-5" /> },
   ],
@@ -79,7 +83,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
               <Heart className="w-4 h-4 text-primary-foreground" />
             </div>
             <span className="font-bold text-sidebar-foreground">
-              Clínica Salud
+              Clínica Jesus
             </span>
           </Link>
         </div>

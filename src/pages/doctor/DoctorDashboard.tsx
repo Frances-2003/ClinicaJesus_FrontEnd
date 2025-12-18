@@ -33,17 +33,20 @@ import {
 } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { es } from 'date-fns/locale';
-import type { EstadoCita, Doctor } from '@/types';
+import type { EstadoCita, Doctor, Cita } from '@/types';
 import { cn } from '@/lib/utils';
+import { DetalleCitaDialog } from '@/components/doctor/DetalleCitaDialog';
 
 export function DoctorDashboard() {
   const { user } = useAuth();
   const { toast } = useToast();
   const { doctores, isLoading: loadingDoctores } = useDoctores();
-  
+
   const [doctorProfile, setDoctorProfile] = useState<Doctor | null>(null);
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
-  
+  const [selectedCita, setSelectedCita] = useState<Cita | null>(null);
+  const [isDetailDialogOpen, setIsDetailDialogOpen] = useState(false);
+
   // Find doctor profile by user id
   useEffect(() => {
     if (doctores.length > 0 && user) {
@@ -72,6 +75,11 @@ export function DoctorDashboard() {
     }
   };
 
+  const handleCitaClick = (cita: Cita) => {
+    setSelectedCita(cita);
+    setIsDetailDialogOpen(true);
+  };
+
   if (loadingDoctores) return <DashboardLayout><LoadingPage /></DashboardLayout>;
 
   if (!doctorProfile) {
@@ -89,6 +97,7 @@ export function DoctorDashboard() {
   const citasPendientes = citas.filter(c => c.estado === 'PENDIENTE');
   const citasConfirmadas = citas.filter(c => c.estado === 'CONFIRMADA');
   const citasAtendidas = citas.filter(c => c.estado === 'ATENDIDA');
+  console.log({ citas });
 
   return (
     <DashboardLayout>
@@ -103,7 +112,7 @@ export function DoctorDashboard() {
               Panel de gestión de citas - {doctorProfile.especialidadNombre || 'Especialidad'}
             </p>
           </div>
-          
+
           {/* Date Picker */}
           <Popover>
             <PopoverTrigger asChild>
@@ -207,12 +216,13 @@ export function DoctorDashboard() {
                 {citas.map((cita) => (
                   <div
                     key={cita.id}
+                    onClick={() => handleCitaClick(cita)}
                     className={cn(
-                      "p-4 rounded-xl border-2 transition-all",
+                      "p-4 rounded-xl border-2 transition-all cursor-pointer hover:shadow-md",
                       cita.estado === 'CANCELADA' && "opacity-50",
-                      cita.estado === 'ATENDIDA' && "bg-success/5 border-success/20",
-                      cita.estado === 'CONFIRMADA' && "bg-info/5 border-info/20",
-                      cita.estado === 'PENDIENTE' && "bg-warning/5 border-warning/20"
+                      cita.estado === 'ATENDIDA' && "bg-success/5 border-success/20 hover:bg-success/10",
+                      cita.estado === 'CONFIRMADA' && "bg-info/5 border-info/20 hover:bg-info/10",
+                      cita.estado === 'PENDIENTE' && "bg-warning/5 border-warning/20 hover:bg-warning/10"
                     )}
                   >
                     <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
@@ -232,11 +242,11 @@ export function DoctorDashboard() {
                           <div className="flex items-center gap-2">
                             <User className="w-4 h-4 text-muted-foreground" />
                             <p className="font-semibold text-foreground">
-                              {cita.paciente?.nombres} {cita.paciente?.apellidos}
+                              {cita.pacienteNombreCompleto}
                             </p>
                             <StatusBadge estado={cita.estado} />
                           </div>
-                          
+
                           <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
                             <span>{cita.paciente?.email}</span>
                             <span>{cita.paciente?.telefono}</span>
@@ -277,6 +287,13 @@ export function DoctorDashboard() {
             )}
           </CardContent>
         </Card>
+
+        {/* Modal de Detalles */}
+        <DetalleCitaDialog
+          cita={selectedCita}
+          open={isDetailDialogOpen}
+          onOpenChange={setIsDetailDialogOpen}
+        />
       </div>
     </DashboardLayout>
   );

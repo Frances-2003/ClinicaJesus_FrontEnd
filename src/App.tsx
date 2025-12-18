@@ -18,11 +18,14 @@ import { ReservarCita } from "@/pages/paciente/ReservarCita";
 
 // Doctor pages
 import { DoctorDashboard } from "@/pages/doctor/DoctorDashboard";
+import { Horarios } from "@/pages/doctor/Horarios";
 
 // Admin pages
 import { AdminDashboard } from "@/pages/admin/AdminDashboard";
 import { Doctores } from "@/pages/admin/Doctores";
 import { Pacientes } from "@/pages/admin/Pacientes";
+import { Usuarios } from "@/pages/admin/Usuarios";
+import { Especialidades } from "@/pages/admin/Especialidades";
 import { Reportes } from "@/pages/admin/Reportes";
 
 import NotFound from "./pages/NotFound";
@@ -85,6 +88,14 @@ const App = () => (
                 </ProtectedRoute>
               }
             />
+            <Route
+              path="/doctor/horarios"
+              element={
+                <ProtectedRoute allowedRoles={['DOCTOR']}>
+                  <Horarios />
+                </ProtectedRoute>
+              }
+            />
 
             {/* Admin routes */}
             <Route
@@ -108,6 +119,22 @@ const App = () => (
               element={
                 <ProtectedRoute allowedRoles={['ADMIN']}>
                   <Pacientes />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/usuarios"
+              element={
+                <ProtectedRoute allowedRoles={['ADMIN']}>
+                  <Usuarios />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/especialidades"
+              element={
+                <ProtectedRoute allowedRoles={['ADMIN']}>
+                  <Especialidades />
                 </ProtectedRoute>
               }
             />

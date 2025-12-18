@@ -20,15 +20,32 @@ import {
   Phone,
   CheckCircle2,
   XCircle,
+  Search,
 } from 'lucide-react';
+import { EditarDoctorDialog } from '@/components/admin/EditarDoctorDialog';
+import { Input } from '@/components/ui/input';
+import { useState } from 'react';
 
 export function Doctores() {
-  const { doctores, isLoading } = useDoctores();
+  const { doctores, isLoading, refetch } = useDoctores();
   const { especialidades } = useEspecialidades(false);
+  const [searchTerm, setSearchTerm] = useState('');
 
   const getEspecialidadNombre = (espId: number) => {
     return especialidades.find(e => e.id === espId)?.nombre || 'Sin especialidad';
   };
+
+  const filteredDoctores = doctores.filter(doctor => {
+    const term = searchTerm.toLowerCase();
+    const especialidadNombre = doctor.especialidadNombre || getEspecialidadNombre(doctor.especialidadId);
+    return (
+      doctor.nombres.toLowerCase().includes(term) ||
+      doctor.apellidos.toLowerCase().includes(term) ||
+      doctor.email.toLowerCase().includes(term) ||
+      doctor.numeroCmp.toLowerCase().includes(term) ||
+      especialidadNombre.toLowerCase().includes(term)
+    );
+  });
 
   return (
     <DashboardLayout>
@@ -52,11 +69,11 @@ export function Doctores() {
               <div className="flex justify-center py-8">
                 <LoadingSpinner />
               </div>
-            ) : doctores.length === 0 ? (
+            ) : filteredDoctores.length === 0 ? (
               <EmptyState
                 icon={<Stethoscope className="w-8 h-8" />}
-                title="No hay doctores registrados"
-                description="Aún no se han registrado doctores en el sistema."
+                title="No se encontraron doctores"
+                description={searchTerm ? "Intenta con otros términos de búsqueda" : "Aún no se han registrado doctores en el sistema."}
               />
             ) : (
               <div className="overflow-x-auto">
@@ -68,10 +85,11 @@ export function Doctores() {
                       <TableHead>CMP</TableHead>
                       <TableHead>Contacto</TableHead>
                       <TableHead>Estado</TableHead>
+                      <TableHead>Acciones</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {doctores.map((doctor) => (
+                    {filteredDoctores.map((doctor) => (
                       <TableRow key={doctor.id}>
                         <TableCell>
                           <div className="flex items-center gap-3">
@@ -80,17 +98,14 @@ export function Doctores() {
                             </div>
                             <div>
                               <p className="font-semibold text-foreground">
-                                Dr. {doctor.usuario?.nombres} {doctor.usuario?.apellidos}
-                              </p>
-                              <p className="text-sm text-muted-foreground">
-                                @{doctor.usuario?.username}
+                                Dr. {doctor.nombres} {doctor.apellidos}
                               </p>
                             </div>
                           </div>
                         </TableCell>
                         <TableCell>
                           <Badge variant="secondary">
-                            {doctor.especialidad?.nombre || getEspecialidadNombre(doctor.especialidadId)}
+                            {doctor.especialidadNombre || getEspecialidadNombre(doctor.especialidadId)}
                           </Badge>
                         </TableCell>
                         <TableCell>
@@ -100,11 +115,7 @@ export function Doctores() {
                           <div className="space-y-1 text-sm">
                             <div className="flex items-center gap-1 text-muted-foreground">
                               <Mail className="w-3 h-3" />
-                              {doctor.usuario?.email}
-                            </div>
-                            <div className="flex items-center gap-1 text-muted-foreground">
-                              <Phone className="w-3 h-3" />
-                              {doctor.usuario?.telefono || '-'}
+                              {doctor.email}
                             </div>
                           </div>
                         </TableCell>
@@ -120,6 +131,9 @@ export function Doctores() {
                               <span className="text-sm">Inactivo</span>
                             </div>
                           )}
+                        </TableCell>
+                        <TableCell>
+                          <EditarDoctorDialog doctor={doctor} onSuccess={refetch} />
                         </TableCell>
                       </TableRow>
                     ))}

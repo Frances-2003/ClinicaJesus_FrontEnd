@@ -18,7 +18,7 @@ class ApiService {
     options: RequestInit = {}
   ): Promise<T> {
     const url = `${API_BASE_URL}${endpoint}`;
-    
+
     const config: RequestInit = {
       ...options,
       headers: {
@@ -28,7 +28,7 @@ class ApiService {
     };
 
     const response = await fetch(url, config);
-    
+
     if (!response.ok) {
       const errorText = await response.text();
       throw new Error(errorText || `Error ${response.status}: ${response.statusText}`);
@@ -70,6 +70,13 @@ class ApiService {
     });
   }
 
+  async actualizarEspecialidad(id: number, data: Omit<Especialidad, 'id'>): Promise<Especialidad> {
+    return this.request<Especialidad>(`/especialidades/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  }
+
   // Doctores
   async getDoctores(): Promise<Doctor[]> {
     return this.request<Doctor[]>('/doctores');
@@ -86,20 +93,62 @@ class ApiService {
     });
   }
 
+  async actualizarDoctor(doctorId: number, data: { especialidadId?: number; numeroCmp?: string }): Promise<Doctor> {
+    return this.request<Doctor>(`/doctores/${doctorId}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  }
+
   // Horarios
   async getHorarios(): Promise<HorarioDisponible[]> {
     return this.request<HorarioDisponible[]>('/horarios');
   }
 
-  async getHorariosPorDoctorYFecha(doctorId: number, fecha: string): Promise<HorarioDisponible[]> {
+  async getHorariosDoctor(doctorId: number, fecha?: string): Promise<HorarioDisponible[]> {
+    // Si no hay fecha, obtener todos los horarios (usando el endpoint general y filtrando)
+    if (!fecha) {
+      const allHorarios = await this.request<HorarioDisponible[]>('/horarios');
+      return allHorarios.filter(h => h.doctorId === doctorId);
+    }
+    // Si hay fecha, usar el endpoint específico
     return this.request<HorarioDisponible[]>(`/horarios/por-doctor-y-fecha?doctorId=${doctorId}&fecha=${fecha}`);
   }
 
-  async crearHorario(data: { doctorId: number; fecha: string; horaInicio: string; horaFin: string }): Promise<HorarioDisponible> {
+  async crearHorario(data: {
+    doctorId: number;
+    fecha: string;
+    horaInicio: string;
+    horaFin: string;
+    activo?: boolean;
+  }): Promise<HorarioDisponible> {
     return this.request<HorarioDisponible>('/horarios', {
       method: 'POST',
       body: JSON.stringify(data),
     });
+  }
+
+  async actualizarHorario(id: number, data: {
+    doctorId?: number;
+    fecha?: string;
+    horaInicio?: string;
+    horaFin?: string;
+    activo?: boolean;
+  }): Promise<HorarioDisponible> {
+    return this.request<HorarioDisponible>(`/horarios/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async eliminarHorario(id: number): Promise<void> {
+    return this.request<void>(`/horarios/${id}`, {
+      method: 'DELETE',
+    });
+  }
+
+  async getHorariosPorDoctorYFecha(doctorId: number, fecha: string): Promise<HorarioDisponible[]> {
+    return this.request<HorarioDisponible[]>(`/horarios/por-doctor-y-fecha?doctorId=${doctorId}&fecha=${fecha}`);
   }
 
   // Citas
@@ -123,19 +172,34 @@ class ApiService {
   }
 
   async cancelarCita(citaId: number): Promise<void> {
-  await this.request<void>(`/citas/${citaId}/cancelar`, { method: 'POST' });
-}
+    await this.request<void>(`/citas/${citaId}/cancelar`, { method: 'POST' });
+  }
 
- async cambiarEstadoCita(citaId: number, estado: EstadoCita): Promise<Cita> {
-  return this.request<Cita>(`/citas/${citaId}/estado`, {
-    method: 'PUT',
-    body: JSON.stringify({ estado }), 
-  });
-}
+  async cambiarEstadoCita(citaId: number, estado: EstadoCita): Promise<Cita> {
+    return this.request<Cita>(`/citas/${citaId}/estado`, {
+      method: 'PUT',
+      body: JSON.stringify({ estado }),
+    });
+  }
 
   // Usuarios (for admin)
   async getUsuarios(): Promise<Usuario[]> {
     return this.request<Usuario[]>('/usuarios');
+  }
+
+  async actualizarRol(usuarioId: number, nuevoRol: 'DOCTOR' | 'ADMIN' | 'PACIENTE'): Promise<Usuario> {
+    return this.request<Usuario>(`/usuarios/${usuarioId}/rol`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ rol: nuevoRol }),
+    });
+  }
+
+  async actualizarUsuario(usuarioId: number, data: Partial<Omit<Usuario, 'id' | 'rol'>>): Promise<Usuario> {
+    return this.request<Usuario>(`/usuarios/${usuarioId}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
   }
 }
 

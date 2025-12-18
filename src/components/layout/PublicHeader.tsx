@@ -34,7 +34,7 @@ export function PublicHeader() {
             <Heart className="w-5 h-5 text-primary-foreground" />
           </div>
           <span className="text-xl font-bold text-foreground">
-            Clínica <span className="text-gradient">Salud</span>
+            Clínica <span className="text-gradient">Jesus</span>
           </span>
         </Link>
 

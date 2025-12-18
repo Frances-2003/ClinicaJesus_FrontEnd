@@ -33,6 +33,8 @@ import {
 import { format, parseISO, isAfter } from 'date-fns';
 import { es } from 'date-fns/locale';
 import type { Cita, EstadoCita } from '@/types';
+import { DetalleCitaDialog } from '@/components/doctor/DetalleCitaDialog';
+import { cn } from '@/lib/utils';
 
 type FilterType = 'todas' | EstadoCita;
 
@@ -42,9 +44,11 @@ export function MisCitas() {
   const { toast } = useToast();
   const [filter, setFilter] = useState<FilterType>('todas');
   const [cancelingId, setCancelingId] = useState<number | null>(null);
+  const [selectedCita, setSelectedCita] = useState<Cita | null>(null);
+  const [isDetailDialogOpen, setIsDetailDialogOpen] = useState(false);
 
-  const filteredCitas = filter === 'todas' 
-    ? citas 
+  const filteredCitas = filter === 'todas'
+    ? citas
     : citas.filter(c => c.estado === filter);
 
   const handleCancelar = async (citaId: number) => {
@@ -70,6 +74,11 @@ export function MisCitas() {
     if (cita.estado !== 'PENDIENTE' && cita.estado !== 'CONFIRMADA') return false;
     if (!cita.fecha) return true;
     return isAfter(parseISO(cita.fecha), new Date());
+  };
+
+  const handleCitaClick = (cita: Cita) => {
+    setSelectedCita(cita);
+    setIsDetailDialogOpen(true);
   };
 
   const filters: { value: FilterType; label: string; count: number }[] = [
@@ -135,7 +144,14 @@ export function MisCitas() {
         ) : (
           <div className="grid gap-4">
             {filteredCitas.map((cita) => (
-              <Card key={cita.id} className="overflow-hidden">
+              <Card
+                key={cita.id}
+                className={cn(
+                  "overflow-hidden cursor-pointer transition-all hover:shadow-lg",
+                  cita.estado === 'CANCELADA' && "opacity-60"
+                )}
+                onClick={() => handleCitaClick(cita)}
+              >
                 <CardContent className="p-0">
                   <div className="flex flex-col lg:flex-row">
                     {/* Date Section */}
@@ -148,7 +164,7 @@ export function MisCitas() {
                         {cita.fecha && format(parseISO(cita.fecha), "yyyy", { locale: es })}
                       </p>
                       <p className="text-sm font-medium text-primary mt-1">
-                        {cita.hora || cita.horarioDisponible?.horaInicio}
+                        {cita.horaInicio || cita.hora || cita.horarioDisponible?.horaInicio || '-'}
                       </p>
                     </div>
 
@@ -166,11 +182,16 @@ export function MisCitas() {
                           <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
                             <span className="flex items-center gap-1">
                               <User className="w-4 h-4" />
-                              Dr. {cita.doctor?.usuario?.nombres} {cita.doctor?.usuario?.apellidos}
+                              {cita.doctorNombreCompleto ||
+                                (cita.doctor ? `Dr. ${cita.doctor.nombres} ${cita.doctor.apellidos}` : 'Doctor no asignado')}
                             </span>
                             <span className="flex items-center gap-1">
                               <Clock className="w-4 h-4" />
-                              {cita.hora || cita.horarioDisponible?.horaInicio} - {cita.horarioDisponible?.horaFin}
+                              {(cita.horaInicio && cita.horaFin)
+                                ? `${cita.horaInicio} - ${cita.horaFin}`
+                                : (cita.hora || cita.horarioDisponible?.horaInicio)
+                                  ? `${cita.hora || cita.horarioDisponible?.horaInicio} - ${cita.horarioDisponible?.horaFin || ''}`
+                                  : 'Hora no especificada'}
                             </span>
                           </div>
 
@@ -188,12 +209,12 @@ export function MisCitas() {
                               S/ {cita.precio.toFixed(2)}
                             </p>
                           )}
-                          
+
                           {canCancel(cita) && (
                             <AlertDialog>
                               <AlertDialogTrigger asChild>
-                                <Button 
-                                  variant="outline" 
+                                <Button
+                                  variant="outline"
                                   size="sm"
                                   className="text-destructive hover:text-destructive hover:bg-destructive/10"
                                   disabled={cancelingId === cita.id}
@@ -233,6 +254,13 @@ export function MisCitas() {
             ))}
           </div>
         )}
+
+        {/* Modal de Detalles */}
+        <DetalleCitaDialog
+          cita={selectedCita}
+          open={isDetailDialogOpen}
+          onOpenChange={setIsDetailDialogOpen}
+        />
       </div>
     </DashboardLayout>
   );

@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import * as React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
@@ -6,6 +7,7 @@ import { useEspecialidades } from '@/hooks/useEspecialidades';
 import { useDoctoresPorEspecialidad } from '@/hooks/useDoctores';
 import { useHorariosPorDoctorYFecha } from '@/hooks/useHorarios';
 import { useCitasPaciente } from '@/hooks/useCitas';
+import { api } from '@/services/api';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -33,9 +35,9 @@ import {
   CheckCircle2,
   Loader2,
 } from 'lucide-react';
-import { format, addDays, isBefore, startOfDay } from 'date-fns';
+import { format, addDays, isBefore, startOfDay, parseISO, isAfter, isSameDay } from 'date-fns';
 import { es } from 'date-fns/locale';
-import type { Especialidad, Doctor, HorarioDisponible } from '@/types';
+import type { Especialidad, Doctor, HorarioDisponible, Cita } from '@/types';
 
 type Step = 1 | 2 | 3 | 4 | 5;
 
@@ -51,7 +53,7 @@ export function ReservarCita() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
-  
+
   const [step, setStep] = useState<Step>(1);
   const [selectedEspecialidad, setSelectedEspecialidad] = useState<Especialidad | null>(null);
   const [selectedDoctor, setSelectedDoctor] = useState<Doctor | null>(null);
@@ -60,6 +62,7 @@ export function ReservarCita() {
   const [motivoConsulta, setMotivoConsulta] = useState('');
   const [notasAdicionales, setNotasAdicionales] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [citasDoctor, setCitasDoctor] = useState<Cita[]>([]);
 
   const { especialidades, isLoading: loadingEsp } = useEspecialidades();
   const { doctores, isLoading: loadingDoc } = useDoctoresPorEspecialidad(selectedEspecialidad?.id || null);
@@ -68,6 +71,26 @@ export function ReservarCita() {
     selectedDate ? format(selectedDate, 'yyyy-MM-dd') : null
   );
   const { crearCita } = useCitasPaciente(user?.id || null);
+
+  // Obtener citas del doctor para la fecha seleccionada
+  const fetchCitasDoctor = async () => {
+    if (!selectedDoctor || !selectedDate) return;
+    try {
+      const citas = await api.getCitasPorDoctorYFecha(
+        selectedDoctor.id,
+        format(selectedDate, 'yyyy-MM-dd')
+      );
+      setCitasDoctor(citas);
+    } catch (error) {
+      console.error('Error fetching citas:', error);
+      setCitasDoctor([]);
+    }
+  };
+
+  // Actualizar citas cuando cambia doctor o fecha
+  React.useEffect(() => {
+    fetchCitasDoctor();
+  }, [selectedDoctor, selectedDate]);
 
   const handleNext = () => {
     if (step < 5) setStep((step + 1) as Step);
@@ -104,7 +127,7 @@ export function ReservarCita() {
         title: '¡Cita reservada!',
         description: 'Tu cita ha sido reservada exitosamente',
       });
-      
+
       navigate('/paciente/citas');
     } catch (error) {
       toast({
@@ -119,6 +142,42 @@ export function ReservarCita() {
 
   const disabledDays = (date: Date) => {
     return isBefore(date, startOfDay(new Date()));
+  };
+
+  // Verificar si un horario está ocupado
+  const isHorarioOcupado = (horario: HorarioDisponible) => {
+    return citasDoctor.some(
+      cita => cita.horarioDisponibleId === horario.id && cita.estado !== 'CANCELADA'
+    );
+  };
+
+  // Verificar si un horario ya pasó
+  const isHorarioPasado = (horario: HorarioDisponible) => {
+    if (!selectedDate) return false;
+    const now = new Date();
+    const horarioDate = parseISO(horario.fecha);
+
+    // Si es hoy, verificar la hora
+    if (isSameDay(horarioDate, now)) {
+      const [hours, minutes] = horario.horaInicio.split(':').map(Number);
+      const horarioTime = new Date();
+      horarioTime.setHours(hours, minutes, 0, 0);
+      return isBefore(horarioTime, now);
+    }
+
+    // Si es un día pasado
+    return isBefore(horarioDate, startOfDay(now));
+  };
+
+  // Obtener clase de color para el horario
+  const getHorarioColorClass = (horario: HorarioDisponible) => {
+    if (isHorarioPasado(horario)) {
+      return 'bg-gray-200 border-gray-300 text-gray-500 cursor-not-allowed opacity-60';
+    }
+    if (isHorarioOcupado(horario)) {
+      return 'bg-red-100 border-red-300 text-red-700 cursor-not-allowed';
+    }
+    return 'bg-green-50 border-green-300 text-green-700 hover:bg-green-100 hover:border-green-400';
   };
 
   return (
@@ -142,8 +201,8 @@ export function ReservarCita() {
                   step === s
                     ? 'bg-primary text-primary-foreground shadow-lg'
                     : step > s
-                    ? 'bg-success text-success-foreground'
-                    : 'bg-muted text-muted-foreground'
+                      ? 'bg-success text-success-foreground'
+                      : 'bg-muted text-muted-foreground'
                 )}
               >
                 {step > s ? <CheckCircle2 className="w-5 h-5" /> : s}
@@ -266,6 +325,22 @@ export function ReservarCita() {
             {/* Step 4: Horario */}
             {step === 4 && (
               <div className="space-y-4">
+                {/* Leyenda de colores */}
+                <div className="flex flex-wrap gap-4 p-3 bg-muted/50 rounded-lg text-sm">
+                  <div className="flex items-center gap-2">
+                    <div className="w-4 h-4 bg-green-100 border-2 border-green-300 rounded"></div>
+                    <span className="text-muted-foreground">Disponible</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="w-4 h-4 bg-red-100 border-2 border-red-300 rounded"></div>
+                    <span className="text-muted-foreground">Ocupado</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="w-4 h-4 bg-gray-200 border-2 border-gray-300 rounded"></div>
+                    <span className="text-muted-foreground">Pasado</span>
+                  </div>
+                </div>
+
                 {loadingHor ? (
                   <div className="flex justify-center py-8">
                     <LoadingSpinner />
@@ -276,22 +351,37 @@ export function ReservarCita() {
                   </p>
                 ) : (
                   <div className="grid grid-cols-3 md:grid-cols-4 gap-3">
-                    {horarios.map((h) => (
-                      <button
-                        key={h.id}
-                        onClick={() => setSelectedHorario(h)}
-                        className={cn(
-                          'p-3 rounded-lg border-2 text-center transition-all hover:shadow-md',
-                          selectedHorario?.id === h.id
-                            ? 'border-primary bg-primary text-primary-foreground'
-                            : 'border-border hover:border-primary/50'
-                        )}
-                      >
-                        <Clock className="w-4 h-4 mx-auto mb-1" />
-                        <p className="font-semibold">{h.horaInicio}</p>
-                        <p className="text-xs opacity-80">{h.horaFin}</p>
-                      </button>
-                    ))}
+                    {horarios.map((h) => {
+                      const ocupado = isHorarioOcupado(h);
+                      const pasado = isHorarioPasado(h);
+                      const disabled = ocupado || pasado;
+
+                      return (
+                        <button
+                          key={h.id}
+                          onClick={() => !disabled && setSelectedHorario(h)}
+                          disabled={disabled}
+                          className={cn(
+                            'p-3 rounded-lg border-2 text-center transition-all relative',
+                            selectedHorario?.id === h.id && !disabled
+                              ? 'border-primary bg-primary text-primary-foreground ring-2 ring-primary/50'
+                              : getHorarioColorClass(h),
+                            !disabled && 'hover:shadow-md'
+                          )}
+                        >
+                          {ocupado && (
+                            <div className="absolute top-1 right-1">
+                              <div className="w-2 h-2 bg-red-500 rounded-full" />
+                            </div>
+                          )}
+                          <Clock className="w-4 h-4 mx-auto mb-1" />
+                          <p className="font-semibold text-sm">{h.horaInicio}</p>
+                          <p className="text-xs opacity-80">{h.horaFin}</p>
+                          {pasado && <p className="text-[10px] mt-1">Pasado</p>}
+                          {ocupado && <p className="text-[10px] mt-1">Ocupado</p>}
+                        </button>
+                      );
+                    })}
                   </div>
                 )}
               </div>

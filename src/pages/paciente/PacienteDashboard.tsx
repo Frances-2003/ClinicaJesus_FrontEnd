@@ -26,6 +26,7 @@ export function PacienteDashboard() {
   const proximaCita = citasPendientes
     .filter(c => c.fecha && isAfter(parseISO(c.fecha), new Date()))
     .sort((a, b) => new Date(a.fecha!).getTime() - new Date(b.fecha!).getTime())[0];
+  console.log({ proximaCita });
 
   return (
     <DashboardLayout>
@@ -124,7 +125,7 @@ export function PacienteDashboard() {
                     </span>
                   </div>
                   <p className="text-sm text-muted-foreground">
-                    Dr. {proximaCita.doctor?.usuario?.nombres} {proximaCita.doctor?.usuario?.apellidos}
+                    Dr. {proximaCita.doctor?.nombres} {proximaCita.doctor?.apellidos}
                   </p>
                 </div>
                 <Button variant="outline" asChild>

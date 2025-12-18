@@ -70,12 +70,22 @@ export interface Cita {
   notasAdicionales?: string;
   estado: EstadoCita;
   precio?: number;
+  moneda?: string;
   paciente?: Usuario;
   horarioDisponible?: HorarioDisponible;
   doctor?: Doctor;
   especialidad?: Especialidad;
+  pacienteNombreCompleto?: string;
+  doctorNombreCompleto?: string;
+  especialidadId?: number;
+  especialidadNombre?: string;
   fecha?: string;
   hora?: string;
+  horaInicio?: string;
+  horaFin?: string;
+  doctorId?: number;
+  observaciones?: string;
+  fechaHoraCreacion?: string;
 }
 
 export interface CrearCitaRequest {
