@@ -30,8 +30,26 @@ class ApiService {
     const response = await fetch(url, config);
 
     if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(errorText || `Error ${response.status}: ${response.statusText}`);
+      let errorMessage = `Error ${response.status}: ${response.statusText}`;
+      try {
+        const errorData = await response.json();
+        // Si el backend devuelve un objeto con 'message' o 'error', úsalo
+        if (errorData.message) errorMessage = errorData.message;
+        else if (errorData.error) errorMessage = errorData.error;
+        else if (typeof errorData === 'string') errorMessage = errorData;
+      } catch (e) {
+        // Si no es JSON, intentamos obtener el texto
+        const textError = await response.text();
+        if (textError) {
+          // Si es un error HTML largo (común en 500s de Spring/Tomcat), mostramos mensaje genérico
+          if (textError.trim().startsWith('<!doctype html') || textError.trim().startsWith('<html')) {
+            errorMessage = 'Ocurrió un error inesperado en el servidor. Por favor intente más tarde.';
+          } else {
+            errorMessage = textError;
+          }
+        }
+      }
+      throw new Error(errorMessage);
     }
 
     // Handle empty responses

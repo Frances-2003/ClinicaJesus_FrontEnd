@@ -36,7 +36,7 @@ import {
 import { Plus, Loader2, Calendar as CalendarIcon } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { api } from '@/services/api';
-import { format } from 'date-fns';
+import { format, isToday } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 
@@ -64,6 +64,19 @@ const formSchema = z.object({
 }, {
     message: 'La hora de fin debe ser posterior a la hora de inicio',
     path: ['horaFin'],
+}).refine((data) => {
+    if (!data.fecha || !data.horaInicio) return true;
+    if (isToday(data.fecha)) {
+        const [hours, minutes] = data.horaInicio.split(':').map(Number);
+        const now = new Date();
+        const selectedDateTime = new Date();
+        selectedDateTime.setHours(hours, minutes, 0, 0);
+        return selectedDateTime > now;
+    }
+    return true;
+}, {
+    message: 'No puedes registrar un horario en el pasado',
+    path: ['horaInicio'],
 });
 
 interface RegistrarHorarioDialogProps {
@@ -184,7 +197,14 @@ export function RegistrarHorarioDialog({ doctorId, onSuccess }: RegistrarHorario
                                             </SelectTrigger>
                                         </FormControl>
                                         <SelectContent className="max-h-[200px]">
-                                            {timeSlots.map((time) => (
+                                            {timeSlots.filter(time => {
+                                                if (!field.value || !isToday(field.value)) return true;
+                                                const [hours, minutes] = time.split(':').map(Number);
+                                                const now = new Date();
+                                                const slotTime = new Date();
+                                                slotTime.setHours(hours, minutes, 0, 0);
+                                                return slotTime > now;
+                                            }).map((time) => (
                                                 <SelectItem key={time} value={time}>
                                                     {time}
                                                 </SelectItem>
@@ -209,7 +229,14 @@ export function RegistrarHorarioDialog({ doctorId, onSuccess }: RegistrarHorario
                                             </SelectTrigger>
                                         </FormControl>
                                         <SelectContent className="max-h-[200px]">
-                                            {timeSlots.map((time) => (
+                                            {timeSlots.filter(time => {
+                                                if (!field.value || !isToday(field.value)) return true;
+                                                const [hours, minutes] = time.split(':').map(Number);
+                                                const now = new Date();
+                                                const slotTime = new Date();
+                                                slotTime.setHours(hours, minutes, 0, 0);
+                                                return slotTime > now;
+                                            }).map((time) => (
                                                 <SelectItem key={time} value={time}>
                                                     {time}
                                                 </SelectItem>
