@@ -132,10 +132,10 @@ export function Horarios() {
                             <div className="flex justify-center py-8">
                                 <LoadingSpinner />
                             </div>
-                        ) : horarios.length === 0 ? (
+                        ) : horarios.filter(h => h.activo !== false).length === 0 ? (
                             <EmptyState
                                 icon={<Clock className="w-8 h-8" />}
-                                title="No hay horarios registrados"
+                                title="No hay horarios activos"
                                 description="Comienza agregando tu disponibilidad para que los pacientes puedan reservar citas."
                             />
                         ) : (
@@ -151,7 +151,7 @@ export function Horarios() {
                                         </TableRow>
                                     </TableHeader>
                                     <TableBody>
-                                        {horarios.map((horario) => (
+                                        {horarios.filter(h => h.activo !== false).map((horario) => (
                                             <TableRow key={horario.id}>
                                                 <TableCell>
                                                     <div className="flex items-center gap-2">
@@ -180,7 +180,7 @@ export function Horarios() {
                                                             Activo
                                                         </Badge>
                                                     ) : (
-                                                        <Badge variant="secondary" className="gap-1">
+                                                        <Badge variant="destructive" className="gap-1">
                                                             <XCircle className="w-3 h-3" />
                                                             Inactivo
                                                         </Badge>
